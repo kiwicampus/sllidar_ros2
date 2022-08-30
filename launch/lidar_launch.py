@@ -16,7 +16,7 @@ def generate_launch_description():
     }
     # S2
     s2_params = {
-        "serial_port": "/dev/ttyTHS0",
+        "serial_port": "/dev/ttyUSB0",
         "serial_baudrate": 1000000,
         "frame_id": "laser_link",
         "inverted": False,
