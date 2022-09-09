@@ -1,11 +1,5 @@
 # SLAMTEC LIDAR ROS2 Package
 
----
-### **Code Information**
-**Integration:** Eng. Wilmer David Garzon Caceres \
-**Mail:** wilmer.garzon@kiwibot.com \
-**Kiwi Campus / AI & Robotics Team**
----
 
 ROS2 node for SLAMTEC LIDAR
 
