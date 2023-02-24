@@ -36,6 +36,8 @@ def generate_launch_description():
                 name="sllidar_node",
                 parameters=[lidar_params],
                 output="screen",
+                respawn=True,
+                respawn_delay=5.0,
             ),
         ]
     )

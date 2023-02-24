@@ -158,7 +158,7 @@ class SLlidarNode : public rclcpp::Node
         if(!drv)
             return false;
 
-        RCLCPP_DEBUG(this->get_logger(),"Stop motor");
+        RCLCPP_INFO(this->get_logger(),"Stop LIDAR motor");
         drv->setMotorSpeed(0);
         return true;
     }
@@ -173,7 +173,7 @@ class SLlidarNode : public rclcpp::Node
            return false;
         if(drv->isConnected())
         {
-            RCLCPP_DEBUG(this->get_logger(),"Start motor");
+            RCLCPP_INFO(this->get_logger(),"Start LIDAR motor");
             sl_result ans=drv->setMotorSpeed();
             if (SL_IS_FAIL(ans)) {
                 RCLCPP_WARN(this->get_logger(), "Failed to start motor: %08x", ans);
