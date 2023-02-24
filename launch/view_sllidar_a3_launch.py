@@ -21,7 +21,7 @@ def generate_launch_description():
     scan_mode = LaunchConfiguration("scan_mode", default="Sensitivity")
 
     rviz_config_dir = os.path.join(
-        get_package_share_directory("sllidar_ros2"), "rviz", "sllidar_ros2.rviz"
+        get_package_share_directory("sllidar_ros2", "rviz", "sllidar_ros2.rviz")
     )
 
     return LaunchDescription(
@@ -58,8 +58,8 @@ def generate_launch_description():
             ),
             Node(
                 package="sllidar_ros2",
-                executable="sllidar_node",
-                name="sllidar_node",
+                node_executable="sllidar_node",
+                node_name="sllidar_node",
                 parameters=[
                     {
                         "serial_port": serial_port,
@@ -74,8 +74,8 @@ def generate_launch_description():
             ),
             Node(
                 package="rviz2",
-                executable="rviz2",
-                name="rviz2",
+                node_executable="rviz2",
+                node_name="rviz2",
                 arguments=["-d", rviz_config_dir],
                 output="screen",
             ),

@@ -46,8 +46,8 @@ def generate_launch_description():
             ),
             Node(
                 package="sllidar_ros2",
-                executable="sllidar_node",
-                name="sllidar_node",
+                node_executable="sllidar_node",
+                node_name="sllidar_node",
                 parameters=[
                     {
                         "serial_port": serial_port,
