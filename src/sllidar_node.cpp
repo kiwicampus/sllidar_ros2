@@ -159,7 +159,8 @@ class SLlidarNode : public rclcpp::Node
             return false;
 
         RCLCPP_INFO(this->get_logger(),"Stop LIDAR motor");
-        drv->setMotorSpeed(0);
+        drv->stop();
+        // drv->setMotorSpeed(0);
         return true;
     }
 
