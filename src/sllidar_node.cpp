@@ -250,7 +250,11 @@ class SLlidarNode : public rclcpp::Node
                 scan_msg->intensities[node_count-1-i] = (float) (nodes[i].quality >> 2);
             }
         }
-
+        if (!publish_state_)
+        {
+            publish_state_ = true;
+        }
+        
         pub->publish(*scan_msg);
     }
 public:    
@@ -439,7 +443,8 @@ public:
 
         return 0;
     }
-
+  public:
+    bool publish_state_ = false;
 
   private:
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub;
@@ -470,11 +475,25 @@ void ExitHandler(int sig)
     need_exit = true;
 }
 
+std::shared_ptr<SLlidarNode> sllidar_node;
+
+void kill_process(int sig)
+{
+  printf("[RPLIDAR]: Cheking rplidar configuration.\n");
+  if (!sllidar_node->publish_state_)
+  {
+    printf("[RPLIDAR]: Bad configuration. Killing process.\n");
+    exit(1);
+  }
+}
+
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);  
-  auto sllidar_node = std::make_shared<SLlidarNode>();
+  signal(SIGALRM,(void (*)(int))kill_process);
+  sllidar_node = std::make_shared<SLlidarNode>();
+  alarm(20);
   signal(SIGINT,ExitHandler);
   int ret = sllidar_node->work_loop();
   rclcpp::shutdown();
