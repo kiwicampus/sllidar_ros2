@@ -9,8 +9,8 @@ def generate_launch_description():
     # S1
     s1_params = {
         "channel_type": "serial",
-        "serial_port": "/dev/ttyTHS0",
-        "serial_baudrate": 256000,
+        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyTHS0"),
+        "serial_baudrate": int(os.getenv(key="LIDAR_BAUD_RATE", default=256000)),
         "frame_id": "laser_link",
         "inverted": False,
         "angle_compensate": True,
@@ -18,8 +18,8 @@ def generate_launch_description():
     # S2
     s2_params = {
         "channel_type": "serial",
-        "serial_port": "/dev/ttyTHS0",
-        "serial_baudrate": 1000000,
+        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyUSB0"),
+        "serial_baudrate": int(os.getenv(key="LIDAR_BAUD_RATE", default=1000000)),
         "frame_id": "laser_link",
         "inverted": False,
         "angle_compensate": True,
@@ -38,6 +38,8 @@ def generate_launch_description():
                 name="sllidar_node",
                 parameters=[lidar_params],
                 output="screen",
+                respawn=True,
+                respawn_delay=5.0,
             ),
         ]
     )
