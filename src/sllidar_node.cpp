@@ -159,7 +159,9 @@ class SLlidarNode : public rclcpp::Node
         if(!drv)
             return false;
 
-        RCLCPP_DEBUG(this->get_logger(),"Stop motor");
+        RCLCPP_INFO(this->get_logger(),"Stop LiDAR motor");
+        // Maybe this is fixed. So, just uncomment in case doesn't work
+        // drv->stop();
         drv->setMotorSpeed(0);
         return true;
     }
@@ -174,7 +176,7 @@ class SLlidarNode : public rclcpp::Node
            return false;
         if(drv->isConnected())
         {
-            RCLCPP_DEBUG(this->get_logger(),"Start motor");
+            RCLCPP_INFO(this->get_logger(),"Start LiDAR motor");
             sl_result ans=drv->setMotorSpeed();
             if (SL_IS_FAIL(ans)) {
                 RCLCPP_WARN(this->get_logger(), "Failed to start motor: %08x", ans);
@@ -249,6 +251,11 @@ class SLlidarNode : public rclcpp::Node
                     scan_msg->ranges[node_count-1-i] = read_value;
                 scan_msg->intensities[node_count-1-i] = (float) (nodes[i].quality >> 2);
             }
+        }
+
+        if (!publish_state_)
+        {
+            publish_state_ = true;
         }
 
         pub->publish(*scan_msg);
@@ -439,6 +446,8 @@ public:
 
         return 0;
     }
+  public:
+    bool publish_state_ = false;
 
 
   private:
@@ -470,10 +479,24 @@ void ExitHandler(int sig)
     need_exit = true;
 }
 
+std::shared_ptr<SLlidarNode> sllidar_node;
+
+void kill_process(int sig)
+{
+  printf("[RPLIDAR]: Cheking rplidar configuration.\n");
+  if (!sllidar_node->publish_state_)
+  {
+    printf("[RPLIDAR]: Bad configuration. Killing process.\n");
+    exit(1);
+  }
+}
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);  
+  signal(SIGALRM,(void (*)(int))kill_process);
+  sllidar_node = std::make_shared<SLlidarNode>();
+  alarm(20);
   auto sllidar_node = std::make_shared<SLlidarNode>();
   signal(SIGINT,ExitHandler);
   int ret = sllidar_node->work_loop();
