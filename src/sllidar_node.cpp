@@ -494,9 +494,9 @@ void kill_process(int sig)
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);  
-  signal(SIGALRM,(void (*)(int))kill_process);
+  //   signal(SIGALRM,(void (*)(int))kill_process);
   sllidar_node = std::make_shared<SLlidarNode>();
-  alarm(20);
+  //   alarm(20);
   auto sllidar_node = std::make_shared<SLlidarNode>();
   signal(SIGINT,ExitHandler);
   int ret = sllidar_node->work_loop();
