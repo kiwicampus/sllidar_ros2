@@ -9,7 +9,7 @@ def generate_launch_description():
     # Lidar params
     # S1
     s1_params = {
-        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyTHS0"),
+        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyUSB0"),
         "serial_baudrate": int(os.getenv(key="LIDAR_BAUD_RATE", default=256000)),
         "frame_id": "laser_link",
         "inverted": False,
@@ -17,7 +17,7 @@ def generate_launch_description():
     }
     # S2
     s2_params = {
-        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyUSB0"),
+        "serial_port": os.getenv(key="LIDAR_PORT", default="/dev/ttyTHS0"),
         "serial_baudrate": int(os.getenv(key="LIDAR_BAUD_RATE", default=1000000)),
         "frame_id": "laser_link",
         "inverted": False,
