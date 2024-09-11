@@ -38,6 +38,11 @@
 #include "sl_lidar.h"
 #include "math.h"
 
+#include <cstdio>
+#include <fstream>
+#include <regex>
+
+
 #include <signal.h>
 
 #ifndef _countof
@@ -63,7 +68,43 @@ class SLlidarNode : public rclcpp::Node
       
     }
 
-  private:    
+  private:
+
+    void scan_lidar_port()
+    {
+        std::string lidar_port_base = serial_port;
+        lidar_port_base.pop_back();
+
+        std::string auxiliary_file = "/tmp/sllidar_detection.txt";
+
+        for (int count = 0; count < 10; count++)
+        {
+            std::string test_port = lidar_port_base + std::to_string(count);
+            std::string cmd =
+                "timeout 1 stdbuf -o0 -e0 /workspace/rover/ros2/src/sllidar_ros2/scripts/sllidar_detection"
+                "--channel --serial " + test_port + " " + std::to_string(serial_baudrate ) +
+                " > " + auxiliary_file + " 2>&1";
+            
+            system(cmd.c_str());
+
+            std::ifstream file(auxiliary_file);  // Open your file
+            if (!file.is_open()) continue;
+
+            std::string line;
+            std::regex pattern("SLAMTEC LIDAR S/N:");  // Set your regex pattern here
+            std::smatch match;
+
+            while (std::getline(file, line)) {
+                if (std::regex_search(line, match, pattern))
+                    serial_port = test_port;
+            }
+
+            file.close();
+            std::remove(auxiliary_file.c_str());
+            break;
+        }
+    }
+
     void init_param()
     {
         this->declare_parameter("channel_type", "serial");
@@ -97,6 +138,9 @@ class SLlidarNode : public rclcpp::Node
             this->get_parameter_or<float>("scan_frequency", scan_frequency, 20.0);
         else
             this->get_parameter_or<float>("scan_frequency", scan_frequency, 10.0);
+
+        scan_lidar_port();
+        this->set_parameter(rclcpp::Parameter("serial_port", serial_port));
     }
 
     bool getSLLIDARDeviceInfo(ILidarDriver * drv)
