@@ -34,7 +34,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
-#include <std_srvs/srv/empty.hpp>
+#include <std_srvs/srv/trigger.hpp>
 #include "sl_lidar.h"
 #include "math.h"
 
@@ -197,14 +197,17 @@ class SLlidarNode : public rclcpp::Node
         }
     }
 
-    bool stop_motor(const std::shared_ptr<std_srvs::srv::Empty::Request> req,
-                    std::shared_ptr<std_srvs::srv::Empty::Response> res)
+    bool stop_motor(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
     {
         (void)req;
-        (void)res;
 
         if(!drv)
+        {
+            res->success = false;
             return false;
+        }
+            
 
         RCLCPP_INFO(this->get_logger(),"Stop LIDAR motor");
         drv->stop();
@@ -212,20 +215,23 @@ class SLlidarNode : public rclcpp::Node
         return true;
     }
 
-    bool start_motor(const std::shared_ptr<std_srvs::srv::Empty::Request> req,
-                    std::shared_ptr<std_srvs::srv::Empty::Response> res)
+    bool start_motor(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
     {
         (void)req;
-        (void)res;
+        res->success = false;
 
-        if(!drv)
-           return false;
+        if(!drv){
+            res->message = "No driver";
+            return false;
+        }
         if(drv->isConnected())
         {
             RCLCPP_INFO(this->get_logger(),"Start LIDAR motor");
             sl_result ans=drv->setMotorSpeed();
             if (SL_IS_FAIL(ans)) {
                 RCLCPP_WARN(this->get_logger(), "Failed to start motor: %08x", ans);
+                res->message = "Failed to start motor";
                 return false;
             }
         
@@ -235,9 +241,10 @@ class SLlidarNode : public rclcpp::Node
             }
         } else {
             RCLCPP_INFO(this->get_logger(),"lost connection");
+            res->message = "Lost connection";
             return false;
         }
-
+        res->success = true;
         return true;
     }
 
@@ -352,9 +359,9 @@ public:
             return -1;
         }
 
-        stop_motor_service = this->create_service<std_srvs::srv::Empty>("stop_motor",  
+        stop_motor_service = this->create_service<std_srvs::srv::Trigger>("stop_motor",  
                                 std::bind(&SLlidarNode::stop_motor,this,std::placeholders::_1,std::placeholders::_2));
-        start_motor_service = this->create_service<std_srvs::srv::Empty>("start_motor", 
+        start_motor_service = this->create_service<std_srvs::srv::Trigger>("start_motor", 
                                 std::bind(&SLlidarNode::start_motor,this,std::placeholders::_1,std::placeholders::_2));
 
         drv->setMotorSpeed();
@@ -496,8 +503,8 @@ public:
 
   private:
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub;
-    rclcpp::Service<std_srvs::srv::Empty>::SharedPtr start_motor_service;
-    rclcpp::Service<std_srvs::srv::Empty>::SharedPtr stop_motor_service;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_motor_service;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_motor_service;
 
     std::string channel_type;
     std::string tcp_ip;
