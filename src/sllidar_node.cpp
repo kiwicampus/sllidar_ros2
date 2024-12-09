@@ -66,22 +66,22 @@ class SLlidarNode : public rclcpp::Node
   private:    
     void init_param()
     {
-        this->declare_parameter("channel_type", "serial");
-        this->declare_parameter("tcp_ip", "192.168.0.7");
-        this->declare_parameter("tcp_port", 20108);
-        this->declare_parameter("udp_ip", "192.168.11.2");
-        this->declare_parameter("udp_port", 8089);
-        this->declare_parameter("serial_port", "/dev/ttyUSB0");
-        this->declare_parameter("serial_baudrate", 1000000);
-        this->declare_parameter("frame_id", "laser_frame");
-        this->declare_parameter("inverted", false);
-        this->declare_parameter("angle_compensate", false);
-        this->declare_parameter("scan_mode", std::string());
+        this->declare_parameter<std::string>("channel_type","serial");
+        this->declare_parameter<std::string>("tcp_ip", "192.168.0.7");
+        this->declare_parameter<int>("tcp_port", 20108);
+        this->declare_parameter<std::string>("udp_ip","192.168.11.2");
+        this->declare_parameter<int>("udp_port",8089);
+        this->declare_parameter<std::string>("serial_port", "/dev/ttyUSB0");
+        this->declare_parameter<int>("serial_baudrate",1000000);
+        this->declare_parameter<std::string>("frame_id","laser_frame");
+        this->declare_parameter<bool>("inverted", false);
+        this->declare_parameter<bool>("angle_compensate", false);
+        this->declare_parameter<std::string>("scan_mode",std::string());
         if(channel_type == "udp")
-            this->declare_parameter("scan_frequency", 20.0);
+            this->declare_parameter<float>("scan_frequency", 20.0);
         else
-            this->declare_parameter("scan_frequency", 10.0);
-
+            this->declare_parameter<float>("scan_frequency", 10.0);
+        
         this->get_parameter_or<std::string>("channel_type", channel_type, "serial");
         this->get_parameter_or<std::string>("tcp_ip", tcp_ip, "192.168.0.7"); 
         this->get_parameter_or<int>("tcp_port", tcp_port, 20108);
@@ -142,6 +142,10 @@ class SLlidarNode : public rclcpp::Node
                 case SL_LIDAR_STATUS_ERROR:
                     RCLCPP_ERROR(this->get_logger(),"Error, SLLidar internal error detected. Please reboot the device to retry.");
                     return false;
+                default:
+                    RCLCPP_ERROR(this->get_logger(),"Error, Unknown internal error detected. Please reboot the device to retry.");
+                    return false;
+
             }
         } else {
             RCLCPP_ERROR(this->get_logger(),"Error, cannot retrieve SLLidar health code: %x", op_result);
@@ -225,7 +229,7 @@ class SLlidarNode : public rclcpp::Node
 
         scan_msg->scan_time = scan_time;
         scan_msg->time_increment = scan_time / (double)(node_count-1);
-        scan_msg->range_min = 0.15;
+        scan_msg->range_min = 0.05;
         scan_msg->range_max = max_distance;//8.0;
 
         scan_msg->intensities.resize(node_count);
@@ -371,7 +375,7 @@ public:
             if (op_result == SL_RESULT_OK) {
                 op_result = drv->ascendScanData(nodes, count);
                 float angle_min = DEG2RAD(0.0f);
-                float angle_max = DEG2RAD(359.0f);
+                float angle_max = DEG2RAD(360.0f);
                 if (op_result == SL_RESULT_OK) {
                     if (angle_compensate) {
                         //const int angle_compensate_multiple = 1;
