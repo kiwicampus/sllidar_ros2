@@ -68,3 +68,4 @@ def generate_launch_description():
                          'scan_mode': scan_mode}],
             output='screen'),
     ])
+
