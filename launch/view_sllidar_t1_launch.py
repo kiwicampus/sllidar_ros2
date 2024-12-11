@@ -20,10 +20,9 @@ def generate_launch_description():
     scan_mode = LaunchConfiguration('scan_mode', default='Sensitivity')
 
     rviz_config_dir = os.path.join(
-            get_package_share_directory('sllidar_ros2',
+            get_package_share_directory('sllidar_ros2'),
             'rviz',
             'sllidar_ros2.rviz')
-        )
 
     return LaunchDescription([
 
