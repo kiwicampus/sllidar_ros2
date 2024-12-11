@@ -22,7 +22,7 @@ def generate_launch_description():
             get_package_share_directory('sllidar_ros2'),
             'rviz',
             'sllidar_ros2.rviz')
-    
+
     return LaunchDescription([
 
         DeclareLaunchArgument(
