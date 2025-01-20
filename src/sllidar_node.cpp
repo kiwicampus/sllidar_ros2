@@ -552,7 +552,7 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);  
   signal(SIGALRM,(void (*)(int))kill_process);
   sllidar_node = std::make_shared<SLlidarNode>();
-  alarm(20);
+  alarm(60);
   signal(SIGINT,ExitHandler);
   int ret = sllidar_node->work_loop();
   rclcpp::shutdown();
