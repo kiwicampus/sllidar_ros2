@@ -56,6 +56,7 @@
 using namespace sl;
 
 bool need_exit = false;
+bool retry_connection = false;
 
 class SLlidarNode : public rclcpp::Node
 {
@@ -64,8 +65,12 @@ class SLlidarNode : public rclcpp::Node
     : Node("sllidar_node")
     {
 
-      scan_pub = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::QoS(rclcpp::KeepLast(10)));
-      
+        scan_pub = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::QoS(rclcpp::KeepLast(10)));
+        init_param();
+        int ver_major = SL_LIDAR_SDK_VERSION_MAJOR;
+        int ver_minor = SL_LIDAR_SDK_VERSION_MINOR;
+        int ver_patch = SL_LIDAR_SDK_VERSION_PATCH;
+        RCLCPP_INFO(this->get_logger(),"SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:" ROS2VERSION ", SLLIDAR SDK Version:%d.%d.%d",ver_major,ver_minor,ver_patch);
     }
 
   private:
@@ -143,8 +148,6 @@ class SLlidarNode : public rclcpp::Node
             this->get_parameter_or<float>("scan_frequency", scan_frequency, 20.0);
         else
             this->get_parameter_or<float>("scan_frequency", scan_frequency, 10.0);
-
-        scan_lidar_port();
     }
 
     bool getSLLIDARDeviceInfo(ILidarDriver * drv)
@@ -318,13 +321,8 @@ class SLlidarNode : public rclcpp::Node
     }
 public:    
     int work_loop()
-    {        
-        init_param();
-        int ver_major = SL_LIDAR_SDK_VERSION_MAJOR;
-        int ver_minor = SL_LIDAR_SDK_VERSION_MINOR;
-        int ver_patch = SL_LIDAR_SDK_VERSION_PATCH;
-        RCLCPP_INFO(this->get_logger(),"SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:" ROS2VERSION ", SLLIDAR SDK Version:%d.%d.%d",ver_major,ver_minor,ver_patch);
-    
+    {
+        scan_lidar_port();
         sl_result     op_result;
 
         // create the driver instance
@@ -355,11 +353,13 @@ public:
         
         // get sllidar device info
         if (!getSLLIDARDeviceInfo(drv)) {
+            RCLCPP_ERROR(this->get_logger(),"Error geting device info");
             return -1;
         }
 
         // check health...
         if (!checkSLLIDARHealth(drv)) {
+            RCLCPP_ERROR(this->get_logger(),"Error checking health");
             return -1;
         }
 
@@ -419,6 +419,12 @@ public:
         rclcpp::Time end_scan_time;
         double scan_duration;
         while (rclcpp::ok() && !need_exit) {
+            if (retry_connection)
+            {
+                retry_connection = false;
+                delete drv;
+                return -1;
+            }
             sl_lidar_response_measurement_node_hq_t nodes[8192];
             size_t   count = _countof(nodes);
 
@@ -536,13 +542,12 @@ void ExitHandler(int sig)
 
 std::shared_ptr<SLlidarNode> sllidar_node;
 
-void kill_process(int sig)
+void kill_process(int)
 {
   printf("[RPLIDAR]: Cheking rplidar configuration.\n");
   if (!sllidar_node->publish_state_)
   {
-    printf("[RPLIDAR]: Bad configuration. Killing process.\n");
-    exit(1);
+    retry_connection = true;
   }
 }
 
@@ -554,7 +559,8 @@ int main(int argc, char * argv[])
   sllidar_node = std::make_shared<SLlidarNode>();
   alarm(60);
   signal(SIGINT,ExitHandler);
-  int ret = sllidar_node->work_loop();
+  int ret=1;
+  while(ret == 0)  ret = sllidar_node->work_loop();
   rclcpp::shutdown();
   return ret;
 }
