@@ -560,7 +560,7 @@ int main(int argc, char * argv[])
   alarm(60);
   signal(SIGINT,ExitHandler);
   int ret=1;
-  while(ret == 0)  ret = sllidar_node->work_loop();
+  while(ret != 0)  ret = sllidar_node->work_loop();
   rclcpp::shutdown();
   return ret;
 }
