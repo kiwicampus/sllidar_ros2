@@ -182,7 +182,7 @@ class SLlidarNode : public rclcpp::Node
         sl_lidar_response_device_health_t healthinfo;
         op_result = drv->getHealth(healthinfo);
         if (SL_IS_OK(op_result)) { 
-            RCLCPP_INFO(this->get_logger(),"SLLidar health status : %d", healthinfo.status);
+            RCLCPP_INFO(this->get_logger(),"SLLidar health status : %d, error code: %d", healthinfo.status, healthinfo.error_code);
             switch (healthinfo.status) {
                 case SL_LIDAR_STATUS_OK:
                     RCLCPP_INFO(this->get_logger(),"SLLidar health status : OK.");
@@ -253,6 +253,26 @@ class SLlidarNode : public rclcpp::Node
         }
         res->success = true;
         return true;
+    }
+
+    bool reset_lidar(const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+                    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
+    {
+        (void)req;
+        res->success = false;
+        if(!drv){
+            res->message = "No driver";
+            return false;
+        }
+        if(drv->isConnected()){
+            sl_result ans = drv->reset();
+            if (SL_IS_FAIL(ans)) {
+                RCLCPP_WARN(this->get_logger(), "Failed to reset lidar: %08x", ans);
+                res->message = "Failed to reset lidar";
+                return false;
+            }
+        }
+        res->success = true;
     }
 
     static float getAngle(const sl_lidar_response_measurement_node_hq_t& node)
@@ -367,6 +387,8 @@ public:
                                 std::bind(&SLlidarNode::stop_motor,this,std::placeholders::_1,std::placeholders::_2));
         start_motor_service = this->create_service<std_srvs::srv::Trigger>("start_motor", 
                                 std::bind(&SLlidarNode::start_motor,this,std::placeholders::_1,std::placeholders::_2));
+        reset_lidar_service = this->create_service<std_srvs::srv::Trigger>("reset_lidar",
+                                std::bind(&SLlidarNode::reset_lidar,this,std::placeholders::_1,std::placeholders::_2));
 
         drv->setMotorSpeed();
 
@@ -515,7 +537,8 @@ public:
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_motor_service;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_motor_service;
-
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_lidar_service;
+    
     std::string channel_type;
     std::string tcp_ip;
     std::string udp_ip;
