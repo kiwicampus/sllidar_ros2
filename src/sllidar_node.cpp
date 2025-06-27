@@ -271,6 +271,7 @@ class SLlidarNode : public rclcpp::Node
                 res->message = "Failed to reset lidar";
                 return false;
             }
+            exit(0);
         }
         res->success = true;
     }
@@ -518,6 +519,17 @@ public:
                                 angle_min, angle_max, max_distance,
                                 frame_id);
                 }
+                else if (op_result == SL_RESULT_OPERATION_STOP) {
+                    sl_lidar_response_device_health_t healthinfo;
+                    drv->getHealth(healthinfo);
+                    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 10000, "Lidar is stopped, health status : %d, error code: %d", healthinfo.status, healthinfo.error_code);
+                }
+                else if (op_result == SL_RESULT_OPERATION_TIMEOUT) {
+                    sl_lidar_response_device_health_t healthinfo;
+                    drv->getHealth(healthinfo);
+                    RCLCPP_ERROR_THROTTLE(this->get_logger(), *this->get_clock(), 10000, "Lidar is timeout, health status : %d, error code: %d", healthinfo.status, healthinfo.error_code);
+                }
+
             }
 
             rclcpp::spin_some(shared_from_this());
