@@ -63,9 +63,13 @@ class SLlidarNode : public rclcpp::Node
    public:
     SLlidarNode() : Node("sllidar_node")
     {
+        auto transient_qos = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
         scan_pub = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::QoS(rclcpp::KeepLast(10)));
         firmware_version_pub = this->create_publisher<std_msgs::msg::String>(
-            "/scan/firmware_version", rclcpp::QoS(rclcpp::KeepLast(1)).transient_local());
+            "/scan/firmware_version", transient_qos);
+        serial_number_pub = this->create_publisher<std_msgs::msg::String>(
+            "/scan/serial_number", transient_qos);
+        
         init_param();
         int ver_major = SL_LIDAR_SDK_VERSION_MAJOR;
         int ver_minor = SL_LIDAR_SDK_VERSION_MINOR;
@@ -178,15 +182,21 @@ class SLlidarNode : public rclcpp::Node
         {
             sprintf(sn_str + (pos * 2), "%02X", devinfo.serialnum[pos]);
         }
-        RCLCPP_INFO(this->get_logger(), "SLLidar S/N: %s", sn_str);
-        RCLCPP_INFO(this->get_logger(), "Firmware Ver: %d.%02d", devinfo.firmware_version >> 8,
-                    devinfo.firmware_version & 0xFF);
-        auto firmware_msg = std::make_shared<std_msgs::msg::String>();
+
+        auto serial_number_msg = std_msgs::msg::String();
+        serial_number_msg.data = sn_str;
+        serial_number_pub->publish(serial_number_msg);
+
         char firmware_str[16];
         snprintf(firmware_str, sizeof(firmware_str), "%d.%02d", devinfo.firmware_version >> 8,
                  devinfo.firmware_version & 0xFF);
-        firmware_msg->data = firmware_str;
-        firmware_version_pub->publish(*firmware_msg);
+
+        auto firmware_msg = std_msgs::msg::String();
+        firmware_msg.data = firmware_str;
+        firmware_version_pub->publish(firmware_msg);
+
+        RCLCPP_INFO(this->get_logger(), "SLLidar S/N: %s", sn_str);
+        RCLCPP_INFO(this->get_logger(), "Firmware Ver: %s", firmware_str);
         RCLCPP_INFO(this->get_logger(), "Hardware Rev: %d", (int)devinfo.hardware_version);
         return true;
     }
@@ -302,6 +312,7 @@ class SLlidarNode : public rclcpp::Node
             exit(0);
         }
         res->success = true;
+        return true;
     }
 
     static float getAngle(const sl_lidar_response_measurement_node_hq_t& node)
@@ -627,6 +638,7 @@ class SLlidarNode : public rclcpp::Node
    private:
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_pub;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr firmware_version_pub;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr serial_number_pub;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_motor_service;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_motor_service;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_lidar_service;
