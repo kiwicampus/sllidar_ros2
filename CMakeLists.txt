@@ -35,6 +35,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 ################################################################################
 # Build
@@ -45,13 +46,27 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(sllidar_node	src/sllidar_node.cpp ${SLLIDAR_SDK_SRC})
-# target_link_libraries(sllidar_node ${ament_cmake_LIBRARIES})
-ament_target_dependencies(sllidar_node
+add_library(sllidar_node_component SHARED src/sllidar_node.cpp ${SLLIDAR_SDK_SRC})
+ament_target_dependencies(sllidar_node_component
+  rclcpp_components
   rclcpp
   std_srvs
   sensor_msgs
 )
+
+rclcpp_components_register_node(
+  sllidar_node_component
+  PLUGIN "sl::SLlidarNode"
+  EXECUTABLE sllidar
+)
+ament_export_targets(export_sllidar_node_component)
+install(TARGETS sllidar_node_component
+  EXPORT export_sllidar_node_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 
 add_executable(sllidar_client src/sllidar_client.cpp)
 ament_target_dependencies(sllidar_client
@@ -67,7 +82,7 @@ install(DIRECTORY launch rviz
 )
 
 install(
-  TARGETS sllidar_node sllidar_client
+  TARGETS sllidar_client
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
