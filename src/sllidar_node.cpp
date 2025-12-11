@@ -62,9 +62,11 @@ class SLlidarNode : public rclcpp::Node
     SLlidarNode(rclcpp::NodeOptions const options) : Node("sllidar_node", options)
     {
         auto transient_qos = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
+        auto no_intraprocess_pub_options = rclcpp::PublisherOptionsWithAllocator<std::allocator<void>>();
+        no_intraprocess_pub_options.use_intra_process_comm = rclcpp::IntraProcessSetting::Disable;
         scan_pub = this->create_publisher<sensor_msgs::msg::LaserScan>("scan", rclcpp::QoS(rclcpp::KeepLast(10)));
-        firmware_version_pub = this->create_publisher<std_msgs::msg::String>("/scan/firmware_version", transient_qos);
-        serial_number_pub = this->create_publisher<std_msgs::msg::String>("/scan/serial_number", transient_qos);
+        firmware_version_pub = this->create_publisher<std_msgs::msg::String>("/scan/firmware_version", transient_qos, no_intraprocess_pub_options);
+        serial_number_pub = this->create_publisher<std_msgs::msg::String>("/scan/serial_number", transient_qos, no_intraprocess_pub_options);
         init_param();
         int ver_major = SL_LIDAR_SDK_VERSION_MAJOR;
         int ver_minor = SL_LIDAR_SDK_VERSION_MINOR;
