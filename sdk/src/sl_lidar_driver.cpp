@@ -1364,6 +1364,7 @@ namespace sl {
         u_result getScanModeName(char* modeName, size_t stringSize, _u16 scanModeID, _u32 timeoutInMs = DEFAULT_TIMEOUT)
         {
             u_result ans;
+            if (stringSize == 0) return SL_RESULT_INVALID_DATA;
 
             std::vector<_u8> answer;
             ans = getLidarConf(SL_LIDAR_CONF_SCAN_MODE_NAME, answer, &scanModeID, sizeof(_u16), timeoutInMs);
@@ -1371,10 +1372,11 @@ namespace sl {
             {
                 return ans;
             }
-            size_t len = std::min<size_t>(answer.size(), stringSize);
+            size_t len = std::min<size_t>(answer.size(), stringSize - 1);
             if (0 == len) return SL_RESULT_INVALID_DATA;
 
             memcpy(modeName, &answer[0], len);
+            modeName[len] = '\0';
             return ans;
         }
 

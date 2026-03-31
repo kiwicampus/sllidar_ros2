@@ -252,7 +252,7 @@ void AsyncTransceiver::unbindAndClose()
 
     for (std::list< Buffer* >::iterator itr = _rxQueue.begin(); itr != _rxQueue.end(); ++itr)
     {
-        delete [] *itr;
+        delete *itr;
     }
     _rxQueue.clear();
 

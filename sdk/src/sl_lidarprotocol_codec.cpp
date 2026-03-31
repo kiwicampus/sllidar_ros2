@@ -53,6 +53,8 @@
 
 namespace sl { namespace internal {
 
+static const size_t kMaxAllowedPayloadSize = 1024 * 1024;
+
 
 
 RPLidarProtocolCodec::RPLidarProtocolCodec()
@@ -183,6 +185,12 @@ void RPLidarProtocolCodec::onDecodeData(const void* buffer, size_t size)
                     _working_states |= STATUS_LOOP_MODE_FLAG;
                 }
                 _decodingMessage.len = (_decodingMessage.len & RPLIDAR_ANS_HEADER_SIZE_MASK);
+                if (_decodingMessage.len > kMaxAllowedPayloadSize) {
+                    _decodingMessage.cleanData();
+                    _working_states = STATUS_WAIT_SYNC1;
+                    _rx_pos = 0;
+                    break;
+                }
                 // alloc buffer
                 _decodingMessage.fillData(NULL, _decodingMessage.getPayloadSize());
                 _rx_pos = 0;

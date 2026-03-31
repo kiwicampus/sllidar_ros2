@@ -442,16 +442,20 @@ public:
 
         if(SL_IS_OK(op_result))
         {
-            //default frequent is 10 hz (by motor pwm value),  current_scan_mode.us_per_sample is the number of scan point per us
-            int points_per_circle = (int)(1000*1000/current_scan_mode.us_per_sample/scan_frequency);
-            angle_compensate_multiple = points_per_circle/360.0  + 1;
-            if(angle_compensate_multiple < 1) 
-            angle_compensate_multiple = 1.0;
-            max_distance = (float)current_scan_mode.max_distance;
-            RCLCPP_INFO(this->get_logger(),"current scan mode: %s, sample rate: %d Khz, max_distance: %.1f m, scan frequency:%.1f Hz, ", 
-                                current_scan_mode.scan_mode,(int)(1000/current_scan_mode.us_per_sample+0.5),max_distance, scan_frequency);
+            if (current_scan_mode.us_per_sample <= 0.0f || scan_frequency <= 0.0f) {
+                op_result = SL_RESULT_INVALID_DATA;
+            } else {
+                //default frequent is 10 hz (by motor pwm value),  current_scan_mode.us_per_sample is the number of scan point per us
+                int points_per_circle = (int)(1000*1000/current_scan_mode.us_per_sample/scan_frequency);
+                angle_compensate_multiple = points_per_circle/360.0  + 1;
+                if(angle_compensate_multiple < 1) 
+                angle_compensate_multiple = 1.0;
+                max_distance = (float)current_scan_mode.max_distance;
+                RCLCPP_INFO(this->get_logger(),"current scan mode: %s, sample rate: %d Khz, max_distance: %.1f m, scan frequency:%.1f Hz, ", 
+                                    current_scan_mode.scan_mode,(int)(1000/current_scan_mode.us_per_sample+0.5),max_distance, scan_frequency);
+            }
         }
-        else
+        if (SL_IS_FAIL(op_result))
         {
             RCLCPP_ERROR(this->get_logger(),"Can not start scan: %08x!", op_result);
         }
