@@ -823,10 +823,17 @@ void kill_process(int)
     }
 }
 
+void request_external_reconnect(int)
+{
+    printf("[SLLIDAR]: External reconnect requested (SIGUSR1), tearing down driver for recovery.\n");
+    retry_connection = true;
+}
+
 int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
     signal(SIGALRM, (void (*)(int))kill_process);
+    signal(SIGUSR1, (void (*)(int))request_external_reconnect);
     sllidar_node = std::make_shared<SLlidarNode>();
     alarm(60);
     signal(SIGINT, ExitHandler);
