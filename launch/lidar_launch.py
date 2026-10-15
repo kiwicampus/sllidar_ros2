@@ -14,6 +14,7 @@ def generate_launch_description():
         "frame_id": "laser_link",
         "inverted": False,
         "angle_compensate": True,
+        "reconnect_max_stall_sec": 5.0,
     }
     # S2
     s2_params = {
@@ -23,6 +24,7 @@ def generate_launch_description():
         "inverted": False,
         "angle_compensate": True,
         "scan_mode": "DenseBoost",
+        "reconnect_max_stall_sec": 5.0,
     }
 
     lidar_params = (

@@ -193,6 +193,23 @@ class SLlidarNode : public rclcpp::Node
         drv = nullptr;
     }
 
+    // Sends the reset command (0xA5 0x40) so the lidar reboots, then tears down the driver.
+    // work_loop reconnects afterwards.
+    void reset_lidar_driver()
+    {
+        if (!drv)
+        {
+            return;
+        }
+        sl_result ans = drv->reset();
+        if (SL_IS_FAIL(ans))
+        {
+            RCLCPP_WARN(this->get_logger(), "Failed to send reset command to lidar: %08x", ans);
+        }
+        publish_state_ = false;
+        turn_off_lidar_driver();
+    }
+
     bool getSLLIDARDeviceInfo(ILidarDriver* drv)
     {
         sl_result op_result;
@@ -276,9 +293,11 @@ class SLlidarNode : public rclcpp::Node
                     std::shared_ptr<std_srvs::srv::Trigger::Response> res)
     {
         (void)req;
+        motor_enabled_ = false;
 
         if (!drv)
         {
+            // Motor stays off on the next reconnect
             res->success = false;
             return false;
         }
@@ -294,11 +313,16 @@ class SLlidarNode : public rclcpp::Node
     {
         (void)req;
         res->success = false;
+        motor_enabled_ = true;
+        // Give the motor time to spin up before the stall watchdog kicks in
+        last_successful_scan_wall_time_ = this->now();
 
         if (!drv)
         {
-            res->message = "No driver";
-            return false;
+            // Applied on the next reconnect
+            res->success = true;
+            res->message = "No driver, motor will start on reconnect";
+            return true;
         }
         if (drv->isConnected())
         {
@@ -432,6 +456,12 @@ class SLlidarNode : public rclcpp::Node
 
         while (rclcpp::ok() && !need_exit)
         {
+            while (!motor_enabled_ && rclcpp::ok() && !need_exit)
+            {
+                rclcpp::spin_some(shared_from_this());
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+
             if (channel_type == "serial")
             {
                 scan_lidar_port();
@@ -484,7 +514,7 @@ class SLlidarNode : public rclcpp::Node
             if (!getSLLIDARDeviceInfo(drv))
             {
                 RCLCPP_ERROR(this->get_logger(), "Error geting device info");
-                turn_off_lidar_driver();
+                reset_lidar_driver();
                 if (!auto_reconnect)
                 {
                     return -1;
@@ -607,16 +637,25 @@ class SLlidarNode : public rclcpp::Node
                     break;
                 }
 
+                if (!motor_enabled_)
+                {
+                    // Motor stopped on purpose (e.g. door open), no scans expected
+                    rclcpp::spin_some(shared_from_this());
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    consecutive_grab_failures = 0;
+                    last_successful_scan_wall_time_ = this->now();
+                    continue;
+                }
+
                 if (reconnect_max_stall_sec > 0.0)
                 {
                     double stall = (this->now() - last_successful_scan_wall_time_).seconds();
                     if (stall > reconnect_max_stall_sec)
                     {
                         RCLCPP_ERROR(this->get_logger(),
-                                     "No scan published for %.1f s (stall limit %.1f s); reconnecting lidar.", stall,
+                                     "No scan published for %.1f s (stall limit %.1f s); resetting lidar.", stall,
                                      reconnect_max_stall_sec);
-                        publish_state_ = false;
-                        turn_off_lidar_driver();
+                        reset_lidar_driver();
                         if (!auto_reconnect)
                         {
                             return -1;
@@ -641,10 +680,8 @@ class SLlidarNode : public rclcpp::Node
                                          consecutive_grab_failures, reconnect_grab_failures_threshold);
                     if (consecutive_grab_failures >= reconnect_grab_failures_threshold)
                     {
-                        RCLCPP_ERROR(this->get_logger(),
-                                     "Sustained grab failures; tearing down lidar connection for recovery.");
-                        publish_state_ = false;
-                        turn_off_lidar_driver();
+                        RCLCPP_ERROR(this->get_logger(), "Sustained grab failures; resetting lidar for recovery.");
+                        reset_lidar_driver();
                         if (!auto_reconnect)
                         {
                             return -1;
@@ -801,6 +838,7 @@ class SLlidarNode : public rclcpp::Node
     double reconnect_delay_sec = 1.5;
     double reconnect_max_stall_sec = 0.0;
     bool motor_services_created_ = false;
+    bool motor_enabled_ = true;  // desired motor state, set by start_motor / stop_motor services
     rclcpp::Time last_successful_scan_wall_time_;
 
     ILidarDriver* drv;
