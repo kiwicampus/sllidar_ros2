@@ -312,6 +312,16 @@ class SLlidarNode : public rclcpp::Node
                      std::shared_ptr<std_srvs::srv::Trigger::Response> res)
     {
         (void)req;
+        // A start is already in progress or the lidar is scanning. Sending startScan again
+        // makes it time out (80008002) and resetting the stall watchdog blocks recovery (#6459).
+        // success reports the lidar state (on), so callers do not retry.
+        if (motor_enabled_)
+        {
+            RCLCPP_INFO(this->get_logger(), "Start LIDAR motor rejected: start already in progress or running");
+            res->success = true;
+            res->message = "Start already in progress or running";
+            return true;
+        }
         res->success = false;
         motor_enabled_ = true;
         // Give the motor time to spin up before the stall watchdog kicks in
@@ -332,6 +342,7 @@ class SLlidarNode : public rclcpp::Node
             {
                 RCLCPP_WARN(this->get_logger(), "Failed to start motor: %08x", ans);
                 res->message = "Failed to start motor";
+                motor_enabled_ = false;  // Let the next start_motor retry
                 return false;
             }
 
@@ -345,6 +356,7 @@ class SLlidarNode : public rclcpp::Node
         {
             RCLCPP_INFO(this->get_logger(), "lost connection");
             res->message = "Lost connection";
+            motor_enabled_ = false;  // Let the next start_motor retry
             return false;
         }
         res->success = true;
